@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node scripts/check.mjs",
-    "build:all": "node scripts/build-all.mjs"
+    "check": "node scripts/check.mjs && node --check scripts/build-all.mjs && node --check scripts/pack-preview.mjs",
+    "build:all": "node scripts/build-all.mjs",
+    "pack:preview": "node scripts/pack-preview.mjs"
   }
 }
