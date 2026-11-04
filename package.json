@@ -1,0 +1,10 @@
+{
+  "name": "@den/infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "build:all": "node scripts/build-all.mjs"
+  }
+}
