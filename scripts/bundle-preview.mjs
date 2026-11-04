@@ -1,0 +1,12 @@
+import {cp,mkdir,rm,readFile,writeFile} from 'node:fs/promises';
+import {resolve,join} from 'node:path';
+const root=resolve(import.meta.dirname,'..'),release=join(root,'.preview/release');
+await rm(release,{recursive:true,force:true});await mkdir(join(release,'.preview'),{recursive:true});await mkdir(join(release,'scripts'),{recursive:true});
+for(const file of ['cloudflare.config.ts','vite.config.js','package-lock.json','PREVIEW_PLAN.md'])await cp(join(root,file),join(release,file));
+for(const file of ['verify-preview.mjs','validate-preview-env.mjs'])await cp(join(root,'scripts',file),join(release,'scripts',file));
+for(const directory of ['backend','assets'])await cp(join(root,'.preview',directory),join(release,'.preview',directory),{recursive:true});
+await cp(join(root,'.preview/manifest.json'),join(release,'.preview/manifest.json'));
+const pkg=JSON.parse(await readFile(join(root,'package.json'),'utf8'));pkg.scripts={'build:preview:local':'cf build --mode development','build:preview':'cf build --mode preview','verify:preview':'node scripts/verify-preview.mjs','validate:preview-env':'node scripts/validate-preview-env.mjs'};await writeFile(join(release,'package.json'),JSON.stringify(pkg,null,2)+'\n');
+await writeFile(join(release,'.gitignore'),'node_modules/\n.cloudflare/\n.env*\n.dev.vars*\n');
+await writeFile(join(release,'README.md'),'# DEN isolated preview release\n\nThis generated release contains all eight UI artifacts plus the Worker source, service modules and migrations. It needs no sibling repository or local database. No secrets, auth credentials or user data are included.\n\nRun `npm ci`, `npm run build:preview:local`, then `npm run verify:preview` for an entirely local workerd integration test. See PREVIEW_PLAN.md for the separate explicitly configured preview deployment process. Do not run remote operations until the authenticated account, isolated database, administrator identity, origin and secrets are verified.\n');
+console.log('Self-contained release prepared at .preview/release. No node_modules, credentials, secret files, local data or remote resources copied.');

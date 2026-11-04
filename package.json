@@ -4,8 +4,29 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node scripts/check.mjs && node --check scripts/build-all.mjs && node --check scripts/pack-preview.mjs",
+    "check": "node scripts/check.mjs && node --check scripts/build-all.mjs && node --check scripts/pack-preview.mjs && node --check scripts/snapshot-preview.mjs && node --check scripts/verify-preview.mjs && node --check scripts/bundle-preview.mjs && node --check scripts/validate-preview-env.mjs",
     "build:all": "node scripts/build-all.mjs",
-    "pack:preview": "node scripts/pack-preview.mjs"
+    "pack:preview": "node scripts/pack-preview.mjs",
+    "snapshot:preview": "node scripts/snapshot-preview.mjs",
+    "prepare:preview": "npm run pack:preview && npm run snapshot:preview",
+    "build:preview:local": "cf build --mode development",
+    "build:preview": "cf build --mode preview",
+    "verify:preview": "node scripts/verify-preview.mjs",
+    "bundle:preview": "node scripts/bundle-preview.mjs",
+    "validate:preview-env": "node scripts/validate-preview-env.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=24.22.0"
+  },
+  "dependencies": {
+    "otpauth": "9.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.11",
+    "cf": "1.0.0-beta.27",
+    "node": "24.22.0",
+    "vite": "8.3.5",
+    "miniflare": "5.20261103.0-beta"
   }
 }

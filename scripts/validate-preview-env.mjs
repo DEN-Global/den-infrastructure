@@ -1,0 +1,12 @@
+import {readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const env=process.env;
+assert.match(env.DEN_PREVIEW_D1_ID??'',/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,'Explicit preview database UUID required');assert.notEqual(env.DEN_PREVIEW_D1_ID,'00000000-0000-0000-0000-000000000000');
+assert.match(env.DEN_PREVIEW_WORKER_NAME??'',/^den-global-preview(?:-[a-z0-9-]+)?$/,'Isolated preview Worker name required');
+const origin=new URL(env.DEN_PREVIEW_ORIGIN);assert.equal(origin.protocol,'https:');assert.equal(origin.origin,env.DEN_PREVIEW_ORIGIN);
+assert.ok(['disabled','enabled'].includes(env.DEN_PREVIEW_ADMIN_MODE),'Explicit disabled/enabled preview administrator mode required');
+if(env.DEN_PREVIEW_ADMIN_MODE==='enabled')assert.ok(env.DEN_PREVIEW_PRIMARY_ADMIN_ID&&env.DEN_PREVIEW_PRIMARY_ADMIN_ID!=='not-provisioned'&&env.DEN_PREVIEW_PRIMARY_ADMIN_ID!=='disabled-preview-admin','Enabled mode requires an approved enrolled preview principal');
+assert.ok(env.DEN_PREVIEW_SECRETS_FILE,'External JSON secret-file path is required');
+const secrets=JSON.parse(await readFile(env.DEN_PREVIEW_SECRETS_FILE,'utf8'));assert.deepEqual(Object.keys(secrets),['MFA_ENCRYPTION_KEY'],'Only the declared MFA secret belongs in this upload file');
+assert.equal(typeof secrets.MFA_ENCRYPTION_KEY,'string');const key=Buffer.from(secrets.MFA_ENCRYPTION_KEY,'base64');assert.equal(key.length,32,'MFA encryption key must decode to 32 bytes');assert.equal(key.toString('base64'),secrets.MFA_ENCRYPTION_KEY,'Use canonical base64');
+console.log('Preview environment and secret shape valid. No values printed. Account ownership, database isolation, principal verification and cost approval must be checked separately. No remote action taken.');
