@@ -1,0 +1,12 @@
+import {cp,mkdir,readFile,writeFile,rm} from 'node:fs/promises';
+import {resolve,join} from 'node:path';
+const root=resolve(import.meta.dirname,'..'),out=join(root,'.vercel-release');
+await rm(out,{recursive:true,force:true});await mkdir(out,{recursive:true});
+await cp(join(root,'.preview/assets'),out,{recursive:true});
+await rm(join(out,'_headers'),{force:true});
+await cp(resolve(root,'../den-docs/preview'),join(out,'design-preview'),{recursive:true});
+const raw=await readFile(join(root,'portal/_headers'),'utf8');
+const security=raw.split('\n').filter(l=>l.startsWith('  ')).map(l=>{const i=l.indexOf(':');return {key:l.slice(2,i),value:l.slice(i+1).trim()};});
+await writeFile(join(out,'vercel.json'),JSON.stringify({$schema:'https://openapi.vercel.sh/vercel.json',framework:null,buildCommand:null,outputDirectory:'.',rewrites:[{source:'/api/:path*',destination:'https://den-global-preview-vercel.lekanay2005.workers.dev/api/:path*'}],headers:[{source:'/(.*)',headers:security},{source:'/api/:path*',headers:[{key:'Cache-Control',value:'private, no-store'},{key:'Vercel-CDN-Cache-Control',value:'no-store'},{key:'CDN-Cache-Control',value:'no-store'}]}]},null,2)+'\n');
+await writeFile(join(out,'.vercelignore'),'.env*\n.vercel/\n');
+console.log('Prepared static Vercel release: eight workspaces, screenshot gallery, same-origin API proxy. No local database or secrets copied.');
