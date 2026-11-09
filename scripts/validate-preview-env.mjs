@@ -4,6 +4,7 @@ const env=process.env;
 assert.match(env.DEN_PREVIEW_D1_ID??'',/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,'Explicit preview database UUID required');assert.notEqual(env.DEN_PREVIEW_D1_ID,'00000000-0000-0000-0000-000000000000');
 assert.match(env.DEN_PREVIEW_WORKER_NAME??'',/^den-global-preview(?:-[a-z0-9-]+)?$/,'Isolated preview Worker name required');
 const origin=new URL(env.DEN_PREVIEW_ORIGIN);assert.equal(origin.protocol,'https:');assert.equal(origin.origin,env.DEN_PREVIEW_ORIGIN);
+if(env.DEN_PREVIEW_ORIGIN_ALIAS){const alias=new URL(env.DEN_PREVIEW_ORIGIN_ALIAS);assert.equal(alias.protocol,'https:');assert.equal(alias.origin,env.DEN_PREVIEW_ORIGIN_ALIAS);}
 assert.ok(['disabled','enabled'].includes(env.DEN_PREVIEW_ADMIN_MODE),'Explicit disabled/enabled preview administrator mode required');
 if(env.DEN_PREVIEW_ADMIN_MODE==='enabled')assert.ok(env.DEN_PREVIEW_PRIMARY_ADMIN_ID&&env.DEN_PREVIEW_PRIMARY_ADMIN_ID!=='not-provisioned'&&env.DEN_PREVIEW_PRIMARY_ADMIN_ID!=='disabled-preview-admin','Enabled mode requires an approved enrolled preview principal');
 assert.match(env.DEN_PREVIEW_VAPID_PUBLIC_KEY??'',/^[A-Za-z0-9_-]{87}$/,'VAPID public key required and must be base64url');

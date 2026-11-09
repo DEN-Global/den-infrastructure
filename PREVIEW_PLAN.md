@@ -17,6 +17,7 @@ For a remote isolated preview, set these environment variables from verified acc
 - `DEN_PREVIEW_D1_ID`: UUID of a newly created isolated preview D1 database. Never reuse local QA or production data.
 - `DEN_PREVIEW_WORKER_NAME`: isolated name beginning `den-global-preview`.
 - `DEN_PREVIEW_ORIGIN`: exact HTTPS origin, without trailing slash, matching the preview's actual address.
+- `DEN_PREVIEW_ORIGIN_ALIAS` (optional): a second exact HTTPS origin allowed to make authenticated API requests during a host transition. Keep this to a site the account owner controls.
 - `DEN_PREVIEW_ADMIN_MODE=disabled`: safe initial preview with `PRIMARY_ADMIN_ID=disabled-preview-admin`, no admin assignments and no bootstrap. Administrative approvals and trade controls remain unavailable until secure owner enrollment is completed separately.
 - Alternatively, `DEN_PREVIEW_ADMIN_MODE=enabled` requires `DEN_PREVIEW_PRIMARY_ADMIN_ID` of an actually approved and securely enrolled preview owner. The build does not create or approve that user.
 - `DEN_PREVIEW_VAPID_PUBLIC_KEY`: the base64url public key paired with the VAPID private key stored in the Worker secret binding.

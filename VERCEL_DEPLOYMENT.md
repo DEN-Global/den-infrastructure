@@ -1,5 +1,11 @@
 # DEN Global on Vercel
 
+## Unified Cloudflare host
+
+All nine app workspaces and the API are now served from one Cloudflare Worker at [den-global-preview-vercel.lekanay2005.workers.dev](https://den-global-preview-vercel.lekanay2005.workers.dev). The Worker binds the single D1 database `den-global-preview-20261104` (`441d5779-a55c-40d8-9551-cecfc6a2326d`); migration `0016_registration_email_verification.sql` is applied. `https://den-global.vercel.app` remains an allowed API origin during the host transition. The Cloudflare Workers URL is the direct host for the unified app.
+
+Email delivery is not configured because this account has no email-sending domain. Sign-up remains paused until a verified sender is connected. Public registration and account verification should not be described as live until email delivery is enabled.
+
 Live app: https://den-global.vercel.app
 Dashboard screenshot gallery: https://den-global.vercel.app/design-preview/
 
