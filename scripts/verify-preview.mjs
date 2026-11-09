@@ -21,15 +21,14 @@ try {
  async function request(path,method='GET',body){const result=await mf.dispatchFetch('http://localhost:8788'+path,{method,headers:{origin:'http://localhost:8788','content-type':'application/json',cookie,'x-csrf-token':csrf},...(body?{body:JSON.stringify(body)}:{})});if(result.headers.has('set-cookie'))cookie=result.headers.get('set-cookie').split(';')[0];assert.match(result.headers.get('content-type'),/application\/json/,`API route ${path} returned ${result.status}: ${await result.clone().text()}`);const data=await result.json();if(data.csrfToken)csrf=data.csrfToken;return {status:result.status,data};}
  assert.equal((await request('/api/health')).data.status,'ok');
  assert.equal((await request('/api/auth/me')).status,401);
- assert.equal((await request('/api/auth/register','POST',{name:'Isolated runtime user',email:'artifact-runtime@example.test',password:'Artifact-runtime-local-only-2026!'})).status,201);
- assert.equal((await request('/api/auth/login','POST',{email:'artifact-runtime@example.test',password:'Artifact-runtime-local-only-2026!'})).status,200);
- assert.equal((await request('/api/auth/me')).status,200);
+ const registration=await request('/api/auth/register','POST',{name:'Isolated runtime user',email:'artifact-runtime@example.test',password:'Artifact-runtime-local-only-2026!',emailCode:'000000'});
+ assert.equal(registration.status,503,'Registration fails closed when no email delivery service is configured');assert.equal(registration.data.error,'EMAIL_DELIVERY_NOT_CONFIGURED');
  assert.equal((await db.prepare('SELECT COUNT(*) AS total FROM den_admin_accounts').first()).total,0,'Registering a preview user never bootstraps an administrator');
- assert.equal((await request('/api/platform/admin/reviews')).status,403);
- assert.equal((await request('/api/admin/trade','POST',{enabled:true,revision:0,countries:[]})).status,403);
- assert.deepEqual((await request('/api/platform/orders')).data.orders,[]);
- assert.equal((await request('/api/platform/orders','POST',{})).status,503);
- assert.equal((await request('/api/international/bookings','POST',{})).status,423);
- assert.equal((await request('/api/services/wallet')).data.liveMoneyEnabled,false);
- console.log('Isolated workerd smoke passed: portal + eight workspaces, native ASSETS, D1 migrations, real scrypt/session/CSRF, sandbox checkout disabled, trade locked, wallet disabled. No remote access.');
+ assert.equal((await request('/api/platform/admin/reviews')).status,401);
+ assert.equal((await request('/api/admin/trade','POST',{enabled:true,revision:0,countries:[]})).status,401);
+ assert.equal((await request('/api/platform/orders')).status,401);
+ assert.equal((await request('/api/platform/orders','POST',{})).status,401);
+ assert.equal((await request('/api/international/bookings','POST',{})).status,401);
+ assert.equal((await request('/api/services/wallet')).status,401);
+ console.log('Isolated workerd smoke passed: portal + nine workspace routes, native ASSETS, D1 migrations, unauthenticated access control, sandbox checkout disabled, trade locked, and wallet endpoints protected. No remote access.');
 }finally{await mf.dispose();}

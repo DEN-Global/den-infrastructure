@@ -1,0 +1,17 @@
+{
+  "id": "/consumer/",
+  "name": "DEN Global",
+  "short_name": "DEN",
+  "description": "One network. Every journey.",
+  "start_url": "/consumer/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2f5ef",
+  "theme_color": "#315f3d",
+  "icons": [
+    { "src": "/den-app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/den-app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/den-app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
