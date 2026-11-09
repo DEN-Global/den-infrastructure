@@ -20,13 +20,14 @@
     "node": ">=24.22.0"
   },
   "dependencies": {
+    "@mmmike/web-push": "^1.5.0",
     "otpauth": "9.6.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.v.11",
     "cf": "1.0.0-beta.27",
+    "miniflare": "5.20261103.0-beta",
     "node": "24.22.0",
-    "vite": "8.3.5",
-    "miniflare": "5.20261103.0-beta"
+    "vite": "8.3.5"
   }
 }
