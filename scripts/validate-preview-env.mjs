@@ -6,7 +6,9 @@ assert.match(env.DEN_PREVIEW_WORKER_NAME??'',/^den-global-preview(?:-[a-z0-9-]+)
 const origin=new URL(env.DEN_PREVIEW_ORIGIN);assert.equal(origin.protocol,'https:');assert.equal(origin.origin,env.DEN_PREVIEW_ORIGIN);
 assert.ok(['disabled','enabled'].includes(env.DEN_PREVIEW_ADMIN_MODE),'Explicit disabled/enabled preview administrator mode required');
 if(env.DEN_PREVIEW_ADMIN_MODE==='enabled')assert.ok(env.DEN_PREVIEW_PRIMARY_ADMIN_ID&&env.DEN_PREVIEW_PRIMARY_ADMIN_ID!=='not-provisioned'&&env.DEN_PREVIEW_PRIMARY_ADMIN_ID!=='disabled-preview-admin','Enabled mode requires an approved enrolled preview principal');
+assert.match(env.DEN_PREVIEW_VAPID_PUBLIC_KEY??'',/^[A-Za-z0-9_-]{87}$/,'VAPID public key required and must be base64url');
 assert.ok(env.DEN_PREVIEW_SECRETS_FILE,'External JSON secret-file path is required');
-const secrets=JSON.parse(await readFile(env.DEN_PREVIEW_SECRETS_FILE,'utf8'));assert.deepEqual(Object.keys(secrets),['MFA_ENCRYPTION_KEY'],'Only the declared MFA secret belongs in this upload file');
+const secrets=JSON.parse(await readFile(env.DEN_PREVIEW_SECRETS_FILE,'utf8'));assert.deepEqual(Object.keys(secrets).sort(),['MFA_ENCRYPTION_KEY','VAPID_PRIVATE_KEY'],'Only the declared MFA and VAPID secrets belong in this upload file');
 assert.equal(typeof secrets.MFA_ENCRYPTION_KEY,'string');const key=Buffer.from(secrets.MFA_ENCRYPTION_KEY,'base64');assert.equal(key.length,32,'MFA encryption key must decode to 32 bytes');assert.equal(key.toString('base64'),secrets.MFA_ENCRYPTION_KEY,'Use canonical base64');
+assert.match(secrets.VAPID_PRIVATE_KEY,/^[A-Za-z0-9_-]{43}$/,'VAPID private key must be base64url and match the configured public key');
 console.log('Preview environment and secret shape valid. No values printed. Account ownership, database isolation, principal verification and cost approval must be checked separately. No remote action taken.');

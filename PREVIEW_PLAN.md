@@ -19,7 +19,8 @@ For a remote isolated preview, set these environment variables from verified acc
 - `DEN_PREVIEW_ORIGIN`: exact HTTPS origin, without trailing slash, matching the preview's actual address.
 - `DEN_PREVIEW_ADMIN_MODE=disabled`: safe initial preview with `PRIMARY_ADMIN_ID=disabled-preview-admin`, no admin assignments and no bootstrap. Administrative approvals and trade controls remain unavailable until secure owner enrollment is completed separately.
 - Alternatively, `DEN_PREVIEW_ADMIN_MODE=enabled` requires `DEN_PREVIEW_PRIMARY_ADMIN_ID` of an actually approved and securely enrolled preview owner. The build does not create or approve that user.
-- `DEN_PREVIEW_SECRETS_FILE`: absolute path outside the repository to a private JSON file containing only `MFA_ENCRYPTION_KEY`, a freshly generated canonical base64 encoding of 32 cryptographically random bytes. Do not reuse the local QA key or paste it into chat.
+- `DEN_PREVIEW_VAPID_PUBLIC_KEY`: the base64url public key paired with the VAPID private key stored in the Worker secret binding.
+- `DEN_PREVIEW_SECRETS_FILE`: absolute path outside the repository to a private JSON file containing `MFA_ENCRYPTION_KEY` (a freshly generated canonical base64 encoding of 32 cryptographically random bytes) and `VAPID_PRIVATE_KEY` (the paired base64url private key). Do not reuse local keys or paste secrets into chat. When updating an existing preview Worker, preserve its current MFA secret and add only the new VAPID private secret.
 
 `npm run validate:preview-env` validates the variable and secret shapes without printing values. It cannot verify account ownership, database isolation, business approval or billing settings. `DEN_SANDBOX_PAYMENTS` is fixed to false in the preview config. Live money and carrier/customs integrations are not configured.
 
