@@ -16,7 +16,7 @@ const mf=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:join(b
 try {
  const db=await mf.getD1Database('DB'),parser=new DatabaseSync(':memory:');
  try{for(const filename of (await readdir(join(backend,'migrations'))).filter(f=>f.endsWith('.sql')).sort()){let remaining=await readFile(join(backend,'migrations',filename),'utf8');while(remaining.trim()){const sql=parser.prepare(remaining).sourceSQL;parser.exec(sql);await db.prepare(sql).run();remaining=remaining.slice(sql.length);}}}finally{parser.close();}
- for(const path of ['/','/consumer/','/manager/','/rider/','/dispatch/','/transport/','/shipment/','/warehouse/','/admin/']){const result=await mf.dispatchFetch('http://localhost:8788'+path);assert.equal(result.status,200,path);assert.match(result.headers.get('content-type'),/text\/html/);assert.equal(result.headers.get('x-content-type-options'),'nosniff',path);assert.match(result.headers.get('content-security-policy')??'',/frame-ancestors 'none'/);assert.match(await result.text(),/DEN/i);}
+ for(const path of ['/','/consumer/','/manager/','/rider/','/dispatch/','/transport/','/shipment/','/warehouse/','/admin/','/orbit/']){const result=await mf.dispatchFetch('http://localhost:8788'+path);assert.equal(result.status,200,path);assert.match(result.headers.get('content-type'),/text\/html/);assert.equal(result.headers.get('x-content-type-options'),'nosniff',path);assert.match(result.headers.get('content-security-policy')??'',/frame-ancestors 'none'/);assert.match(await result.text(),/DEN/i);}
  let cookie='',csrf='';
  async function request(path,method='GET',body){const result=await mf.dispatchFetch('http://localhost:8788'+path,{method,headers:{origin:'http://localhost:8788','content-type':'application/json',cookie,'x-csrf-token':csrf},...(body?{body:JSON.stringify(body)}:{})});if(result.headers.has('set-cookie'))cookie=result.headers.get('set-cookie').split(';')[0];assert.match(result.headers.get('content-type'),/application\/json/,`API route ${path} returned ${result.status}: ${await result.clone().text()}`);const data=await result.json();if(data.csrfToken)csrf=data.csrfToken;return {status:result.status,data};}
  assert.equal((await request('/api/health')).data.status,'ok');
@@ -31,5 +31,5 @@ try {
  assert.equal((await request('/api/platform/orders','POST',{})).status,503);
  assert.equal((await request('/api/international/bookings','POST',{})).status,423);
  assert.equal((await request('/api/services/wallet')).data.liveMoneyEnabled,false);
- console.log('Isolated workerd smoke passed: portal + eight workspaces, native ASSETS, D1 migrations, real scrypt/session/CSRF, sandbox checkout disabled, trade locked, wallet disabled. No remote access.');
+ console.log('Isolated workerd smoke passed: portal + nine workspaces, native ASSETS, D1 migrations, real scrypt/session/CSRF, sandbox checkout disabled, trade locked, wallet disabled. No remote access.');
 }finally{await mf.dispose();}
