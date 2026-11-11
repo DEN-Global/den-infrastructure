@@ -1,26 +1,128 @@
-# DEN Global on Vercel
+# Vercel + Supabase deployment
 
-## Unified Cloudflare host
+Production: https://den-global.vercel.app
+Vercel project: `den-global` (team `team_f8u1LxnQr8BPy98rUSz9gv8M`)
+Database: Supabase project `xhqxadhkcadxnzvbkfwr` (PostgreSQL 17, eu-west-1)
 
-All nine app workspaces and the API are now served from one Cloudflare Worker at [den-global-preview-vercel.lekanay2005.workers.dev](https://den-global-preview-vercel.lekanay2005.workers.dev). The Worker binds the single D1 database `den-global-preview-20261104` (`441d5779-a55c-40d8-9551-cecfc6a2326d`); migration `0016_registration_email_verification.sql` is applied. `https://den-global.vercel.app` remains an allowed API origin during the host transition. The Cloudflare Workers URL is the direct host for the unified app.
+The Cloudflare Worker, its D1 database and the Worker preview deployment are retired. There
+is no Wrangler configuration, no Worker proxy and no `workers.dev` hostname left in any
+repository.
 
-Email delivery is not configured because this account has no email-sending domain. Sign-up remains paused until a verified sender is connected. Public registration and account verification should not be described as live until email delivery is enabled.
+## What a release contains
 
-Live app: https://den-global.vercel.app
-Dashboard screenshot gallery: https://den-global.vercel.app/design-preview/
+`npm run pack:vercel` builds `.vercel-release`:
 
-Vercel project `den-global` belongs to `lekanay2005-coders-projects` (project ID `prj_pygRs4gJ7dLRYxn6s1o6CeUDCaFs`). Deployment `dpl_PmWNHP4CAq9yJW98mqrgZAhr3q9C` is READY in the production target. This is the current development application, not a declaration that all production release gates are complete.
+```
+api/index.js            the single Vercel function entry point
+src/                    backend request handler and domain modules
+vendor/                 shared chat, tracking, payments, wallet and notification modules
+migrations/postgres/    schema baseline and follow-ups
+package.json            runtime dependencies only (pg, otpauth, web-push)
+vercel.json             rewrites, security headers, no-store for /api
+<app>/ …                the nine built workspaces plus the portal
+```
 
-All nine built frontends, including DEN Pets, are served by Vercel. `/api/*` is proxied to the Cloudflare Worker `den-global-preview-vercel.lekanay2005.workers.dev`. Database storage stays in the existing isolated Cloudflare D1 preview database; local SQLite files, local accounts and configuration were not uploaded. Thirteen additive migrations are applied. Worker version: `137c2414-1e69-4213-ac94-e336b040e135`. Its exact write origin is `https://den-global.vercel.app`; use that stable URL rather than deployment-specific addresses for sign-in.
+Static assets come from `.preview/assets`, produced by `npm run prepare:preview` after
+`npm run build:all` has compiled each application with Vite.
 
-The older Cloudflare preview Worker remains separate, sharing the existing preview database. The new API uses disabled owner administration pending secure owner provisioning. Live payments, withdrawals and carrier bookings remain unavailable. Email codes need a configured sender. The screenshot gallery uses synthetic demonstration data and does not grant access to any live role.
+### Routing
 
-## Rebuild and release
+Vercel registers every file in `api/` as its own function and does not support catch-all
+filenames outside Next.js. The release therefore ships one entry point and maps the API to it:
 
-Build the eight sibling frontends with `npm run build:all`, then run `npm run prepare:preview` and `node scripts/pack-vercel.mjs` here. The generated, ignored `.vercel-release` contains only built frontends, the public screenshot gallery and Vercel routing/security headers. It excludes local databases and secrets. Verify the account/project, explicitly link this generated directory to `den-global`, and deploy it with the Vercel CLI in the production target. No automatic Git deployment is configured because source is split across repositories.
+```json
+{ "rewrites": [{ "source": "/api/:path*", "destination": "/api/index" }] }
+```
 
-The API is built from the backend snapshot with the existing Cloudflare preview workflow. Select the verified D1 UUID from the private deployment settings, `DEN_PREVIEW_WORKER_NAME=den-global-preview-vercel`, `DEN_PREVIEW_ORIGIN=https://den-global.vercel.app` and `DEN_PREVIEW_ADMIN_MODE=disabled`. Preserve the existing MFA encryption secret, configure a new VAPID key pair for push alerts, and deploy with `--no-provision`. Do not copy local QA users or change owner authority as a side effect of release.
+Vercel appends the captured path as a `path` query parameter but preserves the original
+pathname, query string and body, so the handler still sees `/api/businesses?page=2` exactly
+as the browser sent it. Do not remove `vendor/` from the release: `src/` imports it.
 
-Do not set global `trailingSlash: true`: it changes `/api/auth/me` to `/api/auth/me/` and breaks exact API routing. API responses are private/no-store, including CDN headers. CSP and other browser security headers mirror the existing portal policy. `.env*` and `.vercel/` are excluded from deployment artifacts.
+## Environment variables
 
-Twenty live smoke checks passed: all eight workspace HTML routes, API health, anonymous denial, credential-file exclusion, screenshot gallery, actual registration and password sign-in against D1, secure cookie, persisted account, no administrator grant, CSRF denial, logout and revocation. Synthetic test credentials were generated in memory and not recorded. See `den-docs/verification/vercel-smoke.json` for results.
+| Variable | Type | Value |
+| --- | --- | --- |
+| `SUPABASE_DATABASE_URL` | sensitive | `postgresql://den_app.<ref>:<password>@aws-1-eu-west-1.pooler.supabase.com:6543/postgres` |
+| `MFA_ENCRYPTION_KEY` | sensitive | base64 32-byte key; changing it invalidates TOTP secrets and push subscriptions |
+| `VAPID_PRIVATE_KEY` | sensitive | base64url VAPID private key |
+| `VAPID_PUBLIC_KEY` | plain | base64url VAPID public key |
+| `VAPID_SUBJECT` | plain | `mailto:` contact for the push service |
+| `APP_ORIGIN` | plain | `https://den-global.vercel.app` |
+| `PRIMARY_ADMIN_ID` | plain | primary super-admin user id, or `disabled` |
+| `DEN_SANDBOX_PAYMENTS` | plain | `false` |
+| `SUPABASE_URL` | plain | `https://xhqxadhkcadxnzvbkfwr.supabase.co`, enables Supabase Auth as the code sender |
+| `SUPABASE_ANON_KEY` | plain | publishable key (`sb_publishable_…`) used with `SUPABASE_URL` |
+| `RESEND_API_KEY` | sensitive | alternative sender: posts to the Resend HTTP API instead |
+| `SIGNIN_EMAIL_FROM` | plain | sender address; defaults to `onboarding@resend.dev` when unset |
+
+`APP_ORIGIN` must match the browser origin exactly, otherwise state-changing requests are
+rejected with `ORIGIN_REJECTED`.
+
+## Database
+
+Use the Supavisor pooler, not `db.<ref>.supabase.co`: the direct host is IPv6-only and
+Vercel functions have no IPv6 egress. Supabase rotates the pooler host, so read it from
+`GET /v1/projects/<ref>/config/database/pooler` rather than assuming `aws-0`.
+
+The application connects as the dedicated `den_app` role (login, `USAGE`/`CREATE` on schema
+`public`) instead of the `postgres` superuser role, so the function only owns what it needs.
+
+Apply the schema before the first deploy, and after any new PostgreSQL migration:
+
+```bash
+SUPABASE_DATABASE_URL=... npm run db:migrate   # in den-backend
+```
+
+`den_schema_migrations` records each applied file with a SHA-256 checksum.
+
+## Deploying
+
+```bash
+cd den-infrastructure
+npm run build:all        # nine Vite builds
+npm run prepare:preview  # pack static assets + manifest
+npm run pack:vercel      # assemble .vercel-release
+cd .vercel-release
+vercel deploy --prod
+```
+
+The CLI cannot authenticate a team-scoped token with `vercel whoami`/`vercel link`, which
+call `/v2/user` and return `User not found`. Write `.vercel/project.json` with `projectId`
+and `orgId`, export `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`, and deploy with
+`vercel deploy --prod --yes --token …`.
+
+## Verification performed
+
+Against https://den-global.vercel.app:
+
+- `GET /api/health` → 200 `{"status":"ok",...}`
+- `GET /api/businesses` unauthenticated → 401 `SIGN_IN_REQUIRED`
+- `POST /api/auth/login` → 200 with a session cookie and CSRF token
+- `GET /api/auth/me`, `GET /api/services/wallet` → 200 through the Postgres pooler
+- `POST /api/platform/addresses` with the CSRF token → 201, row persisted
+- `GET /` → 200 portal, `GET /consumer/` → 200 application shell
+
+Locally, `den-backend/scripts/check-postgres.mjs` passes 19/19 checks against the same
+database, and `npm test` in `den-backend` is unchanged except for five added passing tests
+(98 tests, 88 pass; the 10 failures are identical on the base branch).
+
+## Known gaps
+
+- Registration and email sign-in return `EMAIL_DELIVERY_NOT_CONFIGURED` until a sender is
+  configured. Two paths exist, both already implemented:
+  - **Supabase Auth** (`SUPABASE_URL` + `SUPABASE_ANON_KEY`): the function calls
+    `POST /auth/v1/otp` to send and `POST /auth/v1/verify` to check the code. Requires custom
+    SMTP in Supabase, because on the free tier with the default mailer Supabase refuses
+    template edits (needed for `{{ .Token }}`), allows only 2 messages per hour per project,
+    and delivers only to addresses on the Supabase team.
+  - **Resend** (`RESEND_API_KEY`): sent and stored by the app itself, no rate limits beyond
+    this platform's own, works immediately with any verified sender.
+- Sign-up is two steps in every app that offers it (`/auth/register-code`, then
+  `/auth/register` with `emailCode`), collecting name, email, phone, country and password.
+  Pets, transport and shipment have no sign-up screen: they only sign in. Until a sender is
+  configured the first step returns `503 EMAIL_DELIVERY_NOT_CONFIGURED` and the form says
+  email verification is unavailable.
+- Media is stored as inline data in the database; there is no object storage yet.
+- Deployments are manual. `vercel git connect` and CI are not configured.
+- Deployment Protection is `all_except_custom_domains`, so the production alias is public
+  while preview deployments stay behind Vercel Authentication.
