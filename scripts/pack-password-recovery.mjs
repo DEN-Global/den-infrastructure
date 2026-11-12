@@ -1,0 +1,16 @@
+import {spawnSync} from 'node:child_process';
+import {readFile,writeFile,copyFile} from 'node:fs/promises';
+import {resolve,join} from 'node:path';
+import {createHash} from 'node:crypto';
+const args=process.argv.slice(2),get=flag=>args[args.indexOf(flag)+1];
+if(!args.includes('--base')||!args.includes('--out'))throw Error('Provide --base verified-production --out release-directory');
+const base=resolve(get('--base')),out=resolve(get('--out')),root=resolve(import.meta.dirname,'../..');
+const packed=spawnSync(process.execPath,[join(import.meta.dirname,'pack-ui-refresh.mjs'),'--base',base,'--out',out],{stdio:'inherit'});if(packed.status)process.exit(packed.status);
+let app=await readFile(join(out,'src/app.js'),'utf8');
+if(app.includes("from './password-reset.js'"))throw Error('Use the production baseline before recovery was added.');
+const local=await readFile(join(root,'den-backend/src/app.js'),'utf8'),start=local.indexOf("  if(['/api/auth/forgot-password'"),end=local.indexOf("  if(path==='/api/auth/options'",start);if(start<0||end<0)throw Error('Recovery route block missing');
+const route=local.slice(start,end).replaceAll('requestIp(request)','clientIp(request)');
+app="import {passwordResetReady,issuePasswordReset,resetPassword} from './password-reset.js';\n"+app;
+app=app.replace("  if(path==='/api/auth/options'",route+"  if(path==='/api/auth/options'").replace('registrationEmail:emailReady(env)}','registrationEmail:emailReady(env),passwordReset:passwordResetReady(env)}');
+await writeFile(join(out,'src/app.js'),app);await copyFile(join(root,'den-backend/src/password-reset.js'),join(out,'src/password-reset.js'));
+const manifest=JSON.parse(await readFile(join(out,'ui-release-verification.json'),'utf8'));manifest.backendUnchanged=false;manifest.intentionalBackendChanges=['src/app.js','src/password-reset.js'];for(const file of manifest.intentionalBackendChanges)manifest.backendFiles[file]=createHash('sha256').update(await readFile(join(out,file))).digest('hex');await writeFile(join(out,'ui-release-verification.json'),JSON.stringify(manifest,null,2)+'\n');console.log('Applied only password recovery routes and helper to the verified production API.');

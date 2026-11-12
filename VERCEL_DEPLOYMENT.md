@@ -15,6 +15,10 @@ All nine built frontends, including DEN Pets, are served by Vercel. `/api/*` is 
 
 The older Cloudflare preview Worker remains separate, sharing the existing preview database. The new API uses disabled owner administration pending secure owner provisioning. Live payments, withdrawals and carrier bookings remain unavailable. Email codes need a configured sender. The screenshot gallery uses synthetic demonstration data and does not grant access to any live role.
 
+## Supabase cutover status (2026-11-10)
+
+The production URL remains `https://den-global.vercel.app`. The dedicated Supabase project (`xhqxadhkcadxnzvbkfwr`, `eu-west-1`) now has both schema migrations applied, and the current D1 records were imported and row-count checked (54 rows across 43 DEN tables). Existing sessions, rate counters and one-time verification codes were intentionally excluded. The Vercel API function and PostgreSQL adapter are prepared locally, but production traffic still uses Cloudflare until the Supabase connection string and other required server-only variables are configured in Vercel, then the new deployment is verified. Keep Cloudflare available for rollback until cutover is confirmed. See `den-backend/supabase/README.md`.
+
 ## Rebuild and release
 
 Build the eight sibling frontends with `npm run build:all`, then run `npm run prepare:preview` and `node scripts/pack-vercel.mjs` here. The generated, ignored `.vercel-release` contains only built frontends, the public screenshot gallery and Vercel routing/security headers. It excludes local databases and secrets. Verify the account/project, explicitly link this generated directory to `den-global`, and deploy it with the Vercel CLI in the production target. No automatic Git deployment is configured because source is split across repositories.
