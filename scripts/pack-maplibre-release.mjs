@@ -1,0 +1,13 @@
+import {spawnSync} from 'node:child_process';
+import {readFile,writeFile} from 'node:fs/promises';
+import {resolve,join} from 'node:path';
+import {createHash} from 'node:crypto';
+const args=process.argv.slice(2),out=resolve(args[args.indexOf('--out')+1]);
+if(!args.includes('--base')||!args.includes('--out'))throw Error('Specify --base and --out');
+const result=spawnSync(process.execPath,[new URL('./pack-ui-refresh.mjs',import.meta.url).pathname,...args],{stdio:'inherit'});if(result.status!==0)process.exit(result.status??1);
+const path=join(out,'vercel.json'),config=JSON.parse(await readFile(path,'utf8'));
+const csp=config.headers.find(h=>h.source==='/(.*)').headers.find(h=>h.key==='Content-Security-Policy');
+if(!csp.value.includes("connect-src 'self'; frame-src https://maps.google.com;"))throw Error('Unexpected baseline CSP; review before patching');
+csp.value=csp.value.replace("img-src 'self' data:;","img-src 'self' data: blob: https://tiles.openfreemap.org;").replace("connect-src 'self'; frame-src https://maps.google.com;","connect-src 'self' https://tiles.openfreemap.org; worker-src 'self'; frame-src 'none';");
+await writeFile(path,JSON.stringify(config,null,2)+'\n');
+const manifestPath=join(out,'ui-release-verification.json'),manifest=JSON.parse(await readFile(manifestPath,'utf8'));delete manifest.backendFiles['vercel.json'];manifest.configurationChanges=['vercel.json: allow OpenFreeMap tiles and same-origin MapLibre worker; remove Google frames'];manifest.configurationFiles={'vercel.json':createHash('sha256').update(await readFile(path)).digest('hex')};await writeFile(manifestPath,JSON.stringify(manifest,null,2)+'\n');console.log('Only the scoped map CSP changed; API source and remaining production configuration preserved.');
